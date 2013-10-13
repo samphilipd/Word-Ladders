@@ -42,7 +42,6 @@ using namespace std;
 
 HashSet<string> loadDictionary(string dictionaryFile);
 Stack<string> wordladder(string w1, string w2, HashSet<string> &lexicon);
-void printLadder(Stack<string>);
 
 /* Constants */
 
@@ -68,13 +67,23 @@ int main() {
     // Load dictionary
     cerr << "loading dictionary file " << DICT_FILE << "..." << endl;
     HashSet<string> lexicon = loadDictionary(DICT_FILE);
-    cerr << "loaded dictionary" << endl;
+    cerr << "loaded dictionary, computing solution..." << endl;
 
     // Find winning (i.e. shortest) ladder
     Stack<string> winningLadder = wordladder(word1, word2, lexicon);
 
     // Print winning ladder
-    printLadder(winningLadder);
+    if (winningLadder.isEmpty()) {
+        cout << "No word ladder found from " << word2 << " back to "
+                << word1 << endl;
+    } else {
+        cout << "Ladder from " << word2 << " back to " << word1 << ":"
+                << endl;
+        while (!winningLadder.isEmpty()) {
+            cout << winningLadder.pop() << " ";
+        }
+        cout << endl;
+    }
 
     cout << "Have a nice day." << endl;
     return 0;
@@ -106,7 +115,7 @@ HashSet<string> loadDictionary(string dictionaryFile) {
  * @param &lexicon - reference to set containg valid dictionary words
  *
  * @return - a Stack of strings containing the word ladder from
- * w1 to w2
+ * w1 to w2. Returns an empty stack if no ladder exists.
  *
  * NOTE: "neighbour" is defined as a word that differs by one letter
  * from the current
@@ -114,32 +123,41 @@ HashSet<string> loadDictionary(string dictionaryFile) {
  */
 Stack<string> wordladder(string w1, string w2,
                          HashSet<string> &lexicon) {
-    // create an empty queue of stacks
+    /* Scope-wide Variables */
     Queue< Stack<string> > pQueue;
-    // create/add a stack containing {w1} to the queue
+    HashSet<string> usedWords;
+    Stack<string> emptyLadder;
+
+    // seed queue with initial stack containing {w1}
     Stack<string> s;
     s.push(w1);
     pQueue.enqueue(s);
-    //while the queue is not empty
+
+    //DEBUG variable
+    int iteration = 0;
+
+
+    // performance tweak - words with mismatching lengths will NEVER
+    // return a valid word ladder
+    if (w1.length() != w2.length()) {
+        return emptyLadder;
+    }
+
+    // if queue becomes empty, there is no valid solution
     while(!pQueue.isEmpty()) {
-        cerr << "queue is not empty, dequeueing next stack" << endl;
+        //DEBUG printout
+        iteration += 1;
+        cerr << "iteration: " << iteration << endl;
 
-        Stack<string> ladder;
-        string word;
-        HashSet<string> usedWords;
-
-        // dequeue ladder stack from front of queue
-        ladder = pQueue.dequeue();
-        word = ladder.peek();
+        // dequeue next ladder, make iterations on top word
+        Stack<string> ladder = pQueue.dequeue();
+        string word = ladder.peek();
 
         // if word on top of the stack is the destination word
         if (word == w2) {
             // hooray! this stack is the shortest solution
-            cerr << "solution found! top of stack is " << word << endl;
             return ladder;
         } else {
-            cerr << "this ladder stack is not a solution" << endl;
-            cerr << "top word is " << word << endl;
             // for each new word that is a "neighbour" of word
             // on top of stack
             for (int i = 0; i < word.length(); i++) {
@@ -150,10 +168,10 @@ Stack<string> wordladder(string w1, string w2,
                     // then push to new copy of stack, and requeue
                     string tryNextRung = word;
                     tryNextRung[i] = 'a' + j;
-                    // is it a solution?
+
+                    // performance is better if we quit immediately after
+                    // finding a solution
                     if (tryNextRung == w2) {
-                        cerr << "solution found! top of stack is "
-                             << tryNextRung << endl;
                         ladder.push(tryNextRung);
                         return ladder;
                     }
@@ -171,25 +189,7 @@ Stack<string> wordladder(string w1, string w2,
 
         }
     }
-}
-
-/*
- * Function printLadder()
- *
- * Prints supplied ladder to console
- */
-void printLadder(Stack<string> ladder) {
-    // dump stack into vector
-    Vector<string> ladderVec;
-    while (!ladder.isEmpty()) {
-        ladderVec.add(ladder.pop());
-    }
-
-    // print contents of vector with some human-readable padding
-    cout << "Ladder from " << ladderVec[0] << " back to " <<
-            ladderVec[ladderVec.size() - 1] << ":" << endl;
-    for (int i = 0; i < ladderVec.size(); i++) {
-        cout << ladderVec[i] << " ";
-    }
-    cout << endl;
+    // if we reached this point, the loop quit without finding a valid
+    // word ladder at all
+    return emptyLadder;
 }
